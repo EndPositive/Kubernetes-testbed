@@ -29,26 +29,8 @@ resource "google_compute_instance" "terraform-ansible-vagrant-ansible" {
       private_key = file("~/.ssh/google_compute_engine")
     }
   }
-}
-
-# Provisioning on a separate
-resource "null_resource" "terraform-ansible-vagrant-ansible" {
-  depends_on = [google_compute_instance.terraform-ansible-vagrant-ansible]
-
-  triggers = {
-    ssh_username    = var.ssh_username
-    ssh_key_public  = var.ssh_key_public
-    ssh_key_private = var.ssh_key_private
-    nat_ip          = google_compute_instance.terraform-ansible-vagrant-ansible.network_interface[0].access_config[0].nat_ip
-  }
 
   provisioner "local-exec" {
-    when    = create
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -v -u '${self.triggers.ssh_username}' -i '${self.triggers.nat_ip},' --private-key ${self.triggers.ssh_key_private} -e 'pub_key=${self.triggers.ssh_key_public}' ../ansible-system/system-create-playbook.yaml"
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -v -u '${self.triggers.ssh_username}' -i '${self.triggers.nat_ip},' --private-key ${self.triggers.ssh_key_private} -e 'pub_key=${self.triggers.ssh_key_public}' ../ansible-system/system-destroy-playbook.yaml"
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -v -u '${var.ssh_username}' -i '${self.network_interface[0].access_config[0].nat_ip},' --private-key ${var.ssh_key_private} -e 'pub_key=${var.ssh_key_public}' ../ansible-system/system-create-playbook.yaml"
   }
 }
