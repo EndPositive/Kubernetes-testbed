@@ -1,0 +1,88 @@
+- hosts: all
+  become: true
+  vars:
+    PROVISION_DIR: /tmp/provision
+  tasks:
+    - name: Add an apt signing key for Hashicorp repo
+      apt_key:
+        url: https://apt.releases.hashicorp.com/gpg
+        state: present
+
+    - name: Add Hashicorp apt repository
+      apt_repository:
+        repo: deb [arch=amd64] https://apt.releases.hashicorp.com focal main
+        state: present
+
+    - name: Add Ansible PPA
+      apt_repository:
+        repo: 'ppa:ansible/ansible'
+        state: present
+
+    - name: Enable source repositories
+      replace:
+        path: /etc/apt/sources.list
+        regexp: '^#(.*deb-src.*)$'
+        replace: '\1'
+
+
+    - name: Install build dependencies for Vagrant libvirt
+      apt:
+        name: "{{ packages }}"
+        state: build-dep
+        update_cache: yes
+      vars:
+        packages:
+          - vagrant
+          - ruby-libvirt
+
+    - name: Install Vagrant libvirt dependencies
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+          - vagrant
+          - qemu
+          - libvirt-daemon-system
+          - libvirt-clients
+          - ebtables
+          - dnsmasq-base
+          - libxslt-dev
+          - libxml2-dev
+          - libvirt-dev
+          - zlib1g-dev
+          - ruby-dev
+          - libguestfs-tools
+
+    - name: Install vagrant-libvirt plugin
+      command: vagrant plugin install vagrant-libvirt
+
+    - name: Install Ansible
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+          - ansible
+
+    - name: Create temporary provision directory
+      file:
+        path: "{{ PROVISION_DIR }}"
+        state: directory
+
+    - name: Copy Vagrantfile
+      copy:
+        src: ../Vagrantfile
+        dest: "{{ PROVISION_DIR }}/Vagrantfile"
+
+    - name: Copy Kubernetes Ansible Playbook
+      copy:
+        src: ../ansible-kubernetes/
+        dest: "{{ PROVISION_DIR }}/ansible-playbooks/"
+
+    - name: Boot remote Kubernetes VMs
+      command:
+        chdir: "{{ PROVISION_DIR }}"
+        cmd: vagrant up

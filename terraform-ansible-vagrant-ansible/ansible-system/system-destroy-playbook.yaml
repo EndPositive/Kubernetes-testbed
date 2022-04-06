@@ -1,0 +1,9 @@
+- hosts: all
+  become: true
+  vars:
+    PROVISION_DIR: /tmp/provision
+  tasks:
+    - name: Reset remote Vagrant state
+      command:
+        chdir: "{{ PROVISION_DIR }}"
+        cmd: vagrant destroy --force
